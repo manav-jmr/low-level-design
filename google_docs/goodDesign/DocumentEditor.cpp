@@ -64,14 +64,29 @@ class Document {
             documentElements.push_back(element);
         }
 
+        vector<DocumentElement*> getElements()
+        {
+            return documentElements;
+        }
+};
+
+class DocumentRenderer {
+    private:
+        Document* document;
+    public:
+        DocumentRenderer(Document* document)
+        {
+            this->document = document;
+        }
+
         string render()
         {
-            string res;
-            for(auto &it : documentElements)
+            string renderedDocument;
+            for(DocumentElement* element : document->getElements())
             {
-                res += it->render();
+                renderedDocument += element->render();
             }
-            return res;
+            return renderedDocument;
         }
 };
 
@@ -109,13 +124,10 @@ class saveToDB : public Persistence {
 class DocumentEditor {
     private:
         Document* document;
-        Persistence* storage;
-        string renderedDocument;
     public:
-        DocumentEditor(Document* document , Persistence* storage)
+        DocumentEditor(Document* document)
         {
             this->document = document;
-            this->storage = storage;
         }
 
         void addText(string text)
@@ -137,39 +149,68 @@ class DocumentEditor {
         {
             document->addElement(new TabSpaceElement());
         }
+};
+
+class Client {
+    private:
+        Document* document;
+        DocumentEditor* editor;
+        Persistence* storage;
+        DocumentRenderer* renderer;
+    public:
+        Client(Document* document , DocumentEditor* editor , Persistence* storage , DocumentRenderer* renderer)
+        {
+            this->document = document;
+            this->editor = editor;
+            this->storage = storage;
+            this->renderer = renderer;
+
+        }
+
+        void prepareDocument()
+        {
+            editor->addText("Hello, World!");
+            editor->addNewLine();
+            editor->addText("This is a real world document editor example. ");
+            editor->addNewLine();
+            editor->addTabSpace();
+            editor->addText("Indented text after a tab space. ");
+            editor->addNewLine();
+            editor->addImage("picture.jpg");
+        }
 
         string renderDocument()
         {
-            if(renderedDocument.empty())
-            {
-                renderedDocument = document->render();
-            }
-            return renderedDocument;
+            return renderer->render();
+        }
+
+        void printDocument()
+        {
+            cout << renderDocument() << endl;
         }
 
         void saveDocument()
         {
             storage->save(renderDocument());
         }
+
+        void execute()
+        {
+            prepareDocument();
+            printDocument();
+            saveDocument();
+        }
 };
 
 int main()
 {
     Document* document = new Document();
-    saveToFile* file = new saveToFile();
+    DocumentEditor* editor = new DocumentEditor(document);
+    Persistence* storage = new saveToFile();
+    DocumentRenderer* renderer = new DocumentRenderer(document);
+    Client* client = new Client(document, editor, storage, renderer);
 
-    DocumentEditor* editor = new DocumentEditor(document , file);
+    client->execute();
 
-    editor->addText("Hello, World!");
-    editor->addNewLine();
-    editor->addText("This is a real world document editor example. ");
-    editor->addNewLine();
-    editor->addTabSpace();
-    editor->addText("Indented text after a tab space. ");
-    editor->addNewLine();
-    editor->addImage("picture.jpg");
-
-    cout << editor->renderDocument() << endl;
-
-    editor->saveDocument();
+    return 0;
 }
